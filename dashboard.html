@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Tickets Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/4.2.1/chart.umd.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
+    <header class="w-full bg-white shadow-md p-4 flex justify-between items-center">
+        <h1 class="text-xl font-bold">Dashboard</h1>
+        <button id="logout-btn" class="text-red-500">Cerrar sesión</button>
+    </header>
+    
+    <main class="w-full max-w-4xl mt-6">
+        <div class="bg-white p-4 rounded-lg shadow-md">
+            <h2 class="text-lg font-bold mb-4">Resumen de Tickets</h2>
+            <canvas id="ticketChart"></canvas>
+        </div>
+        
+        <div class="mt-6">
+            <h2 class="text-lg font-bold">Mis Tickets</h2>
+            <table class="w-full mt-4 bg-white rounded-lg shadow-md">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="p-2">Título</th>
+                        <th class="p-2">Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="ticket-list" class="text-center"></tbody>
+            </table>
+        </div>
+        
+        <a href="new_ticket.html" class="mt-6 inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Nuevo Ticket</a>
+    </main>
+    
+    <script type="module">
+        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDOXuoWI2-CWp_RCx_QHWT8nKod1jB9snU",
+            authDomain: "tickets-pro-8b6aa.firebaseapp.com",
+            projectId: "tickets-pro-8b6aa",
+            storageBucket: "tickets-pro-8b6aa.firebasestorage.app",
+            messagingSenderId: "578076283160",
+            appId: "1:578076283160:web:279e9879347f75c143ce6d"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        document.getElementById("logout-btn").addEventListener("click", () => {
+            signOut(auth).then(() => {
+                window.location.href = "index.html";
+            }).catch((error) => {
+                alert("Error al cerrar sesión: " + error.message);
+            });
+        });
+        
+        async function loadTickets() {
+            const ticketList = document.getElementById("ticket-list");
+            const ticketsRef = collection(db, "tickets");
+            const snapshot = await getDocs(ticketsRef);
+            let pending = 0, inProgress = 0, resolved = 0;
+            
+            ticketList.innerHTML = "";
+            snapshot.forEach((doc) => {
+                const ticket = doc.data();
+                ticketList.innerHTML += `
+                    <tr>
+                        <td class='p-2 border'>${ticket.titulo}</td>
+                        <td class='p-2 border'>${ticket.estado}</td>
+                    </tr>
+                `;
+                if (ticket.estado === "Pendiente") pending++;
+                if (ticket.estado === "En Proceso") inProgress++;
+                if (ticket.estado === "Resuelto") resolved++;
+            });
+            
+            new Chart(document.getElementById("ticketChart"), {
+                type: "doughnut",
+                data: {
+                    labels: ["Pendientes", "En Proceso", "Resueltos"],
+                    datasets: [{
+                        data: [pending, inProgress, resolved],
+                        backgroundColor: ["#f87171", "#facc15", "#4ade80"]
+                    }]
+                }
+            });
+        }
+        
+        loadTickets();
+    </script>
+</body>
+</html>
